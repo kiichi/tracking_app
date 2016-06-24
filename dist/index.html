@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script src="/horizon/horizon.js"></script>
+    <script>
+      var map;
+      const horizon = Horizon({ authType: 'anonymous' });//Horizon({authType: "unauthenticated"});
+      var currentUser = null;
+      var allLocations = [];
+      var circles = [];
+      const colors = ['red','blue','green','yellow','cyan','gray','brown','pink'];
+      // Initialize Horizon with current user
+      horizon.onReady(function() {        
+        horizon.currentUser().fetch().subscribe(data => {           
+              currentUser = data;
+              if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(moved);
+              }   
+              horizon("locations").watch().subscribe(locs => {
+                  allLocations = locs;                  
+                  for (let i=0; i<allLocations.length; i++){
+                    let item = allLocations[i];                    
+                    if (circles[item.id]){                      
+                      //circles[item.id].setMap(null);
+                      circles[item.id].setPosition({lat: item.lat, lng: item.lng})                      
+                    }
+                    else {
+                      var circle = new google.maps.Marker({
+                          icon : { 
+                            path: google.maps.SymbolPath.CIRCLE,
+                            strokeWeight:2,
+                            strokeColor: '#666',                          
+                            fillColor: colors[i%colors.length],
+                            fillOpacity: 0.8,
+                            scale: 10
+                          },                                                
+                          map: map,
+                          position: { lat: item.lat, lng: item.lng }
+                      });
+                      circles[item.id] = circle;
+                    }
+                  }
+              });        
+        });                
+      });
+      horizon.connect();
+
+      
+
+      function moved(position){
+          updateLocation(currentUser.id,
+              document.getElementById("username").value,
+              position.coords.latitude,
+              position.coords.longitude);
+      }
+
+      // r.db("tracking_app").table("locations_da188cda29f3").sample(1)
+      // updateLocation(currentUser.id,document.getElementById("username").value,40.760424,-73.974391);   
+      function updateLocation(id,name,lat,lng){        
+        horizon("locations").store({     
+            id:id,
+            name: name,
+            lat:lat,
+            lng:lng,
+            last_update: new Date()
+        });
+      }
+
+      function initMap() {                                        
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 40.760424, lng: -73.974391 },
+                zoom: 15
+            });                               
+      }      
+    </script>
+  </head>
+  <body>
+   <div>
+     <div>
+       <input id="username" value="Anonymous"/>
+     </div>
+     <div id="userList"></div>
+   </div>
+   <div>
+     <div id="map" style="height:600px"></div>
+   </div>
+   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB3he9pplSDn03kBNAZDjD5HjJqkAKAyWw&libraries=visualization&callback=initMap" async defer></script>
+  </body>
+</html>
